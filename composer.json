@@ -1,0 +1,22 @@
+{
+    "name": "ajur-media/template",
+    "description": "Template class for AJUR Media projects, based on Smarty",
+    "type": "library",
+    "require": {
+        "php": "^7.4",
+        "psr/log": "^1.1",
+        "smarty/smarty": "^4.3"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "AJUR\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Karel Wintersky",
+            "email": "karel.wintersky@gmail.com"
+        }
+    ]
+}
