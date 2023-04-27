@@ -28,6 +28,8 @@ class Template implements TemplateInterface
      */
     public array    $titles = [];
 
+    public array    $breadcumbs = []; //@todo like as title (set of ['uri' => ..., 'title' => ...], на основе его можно строить и title
+
     private array   $REQUEST = [];
 
     private array   $template_vars = [];
@@ -148,9 +150,9 @@ class Template implements TemplateInterface
         exit(0);
     }
 
-    public function setTemplate(string $filename)
+    public function setTemplate($filename = null)
     {
-        $this->template_file = $filename;
+        $this->template_file = empty($filename) ? '' : $filename;
     }
 
     public function sendHeader(string $type = '')
@@ -233,6 +235,26 @@ class Template implements TemplateInterface
         return $rendered;
     }
 
+
+    public function addTitle(string $title_part)
+    {
+        $this->titles[] = $title_part;
+    }
+
+
+    public function makeTitle(string $separator = " ", bool $sort = true, bool $reverse_order = false)
+    {
+        $t = $this->titles;
+
+        if ($sort) {
+            ksort($t);
+        }
+
+        if ($reverse_order) {
+            $t = array_reverse($t);
+        }
+        return implode($separator, $t);
+    }
 
 
 }

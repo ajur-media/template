@@ -99,12 +99,13 @@ interface TemplateInterface
     public function makeRedirect(string $uri = null, int $code = null, bool $replace_headers = true);
 
     /**
-     * Устанавливает файл шаблона
+     * Устанавливает файл шаблона.
+     * Без него возможен только рендер Template::CONTENT_TYPE_JSON
      *
-     * @param string $filename
+     * @param string|null $filename
      * @return void
      */
-    public function setTemplate(string $filename);
+    public function setTemplate($filename = null);
 
     /**
      * Посылает header, соответствующий типу контента
@@ -131,7 +132,23 @@ interface TemplateInterface
      */
     public function clean();
 
+    /**
+     * Добавляет title в цепочку title'ов
+     *
+     * @param string $title_part
+     * @return void
+     */
+    public function addTitle(string $title_part);
 
-
+    /**
+     * Строит результирующий title страницы с учетом вложенности.
+     * Может быть использован также для остройки og:title
+     *
+     * @param string $separator
+     * @param bool $sort
+     * @param bool $reverse_order
+     * @return string
+     */
+    public function makeTitle(string $separator = " ", bool $sort = true, bool $reverse_order = false);
 
 }
