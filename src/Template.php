@@ -8,25 +8,15 @@ use Psr\Log\NullLogger;
 use Smarty;
 use SmartyException;
 
-class Template
+class Template implements TemplateInterface
 {
-    const CONTENT_TYPE_RSS = 'rss';
-    const CONTENT_TYPE_JSON = 'json';
-    const CONTENT_TYPE_404 = '404';
-    const CONTENT_TYPE_HTML = 'html';
-
     /**
-     * Available content types
+     * @var Smarty
      */
-    const CONTENT_TYPES = [
-        self::CONTENT_TYPE_RSS      =>  'Content-type: application/xml',
-        self::CONTENT_TYPE_JSON     =>  'Content-Type: application/json; charset=utf-8',
-        self::CONTENT_TYPE_404      =>  "HTTP/1.0 404 Not Found",
-        self::CONTENT_TYPE_HTML     =>  "Content-Type: text/html; charset=utf-8",
-        '_'                         =>  "Content-Type: text/html; charset=utf-8"
-    ];
+    private Smarty  $smarty;
 
     /**
+     * Тип рендера
      * @var string
      */
     public string $render_type = self::CONTENT_TYPE_HTML;
@@ -36,45 +26,44 @@ class Template
      *
      * @var array
      */
-    public array $titles = [];
+    public array    $titles = [];
 
-    /**
-     * @var Smarty
-     */
-    private Smarty $smarty;
+    private array   $REQUEST = [];
 
-    private array $REQUEST = [];
+    private array   $template_vars = [];
 
-    private array $template_vars = [];
+    public string   $force_redirect = '';
+    public int      $force_redirect_code = 200;
 
-    private string $force_redirect = '';
+    private string  $template_file = '';
 
-    private string $template_file = '';
+    private array   $JSON = [];
 
-    private array $JSON = [];
+    public \stdClass $options;
+
+    public array    $redirect = [
+
+    ];
 
     /**
      * @var LoggerInterface|NullLogger
      */
     private $logger;
 
-    private array $rss = [];
-
-    /**
-     * call: smarty, $_REQUEST, $options, $logger
-     *
-     * @param Smarty $smarty_instance
-     * @param array $request
-     * @param array $options
-     * @param LoggerInterface|null $logger
-     */
     public function __construct(Smarty $smarty_instance, array $request = [], array $options = [], LoggerInterface $logger = null)
     {
         $this->logger = is_null($logger) ? new NullLogger() : $logger;
+        $this->options = new \stdClass();
 
         if (array_key_exists('type', $options)) {
-            $this->setRenderType( self::getAllowedValue($options['type'], ['rss', 'json', '404', 'html'], 'html') );
+            $this->options->renderType = $render_type = TemplateHelper::getAllowedValue($options['type'], ['rss', 'json', '404', 'html'], 'html');
+            $this->setRenderType( $render_type );
         }
+
+        /*
+         * PHP8: activate convert warnings about undefined or null template vars -> to notices
+         */
+        $smarty_instance->muteUndefinedOrNullWarnings();
 
         if (array_key_exists('file', $options)) {
             $this->setTemplate($options['file']);
@@ -84,129 +73,140 @@ class Template
             $this->setTemplate($options['source']);
         }
 
+        if (array_key_exists('force_assign', $options) && $options['force_assign']) {
+            $this->options->forceAssign = true;
+        }
+
         $this->smarty = $smarty_instance;
         $this->REQUEST = $request;
     }
 
-    /**
-     * Устанавливает возвращаемый тип данных
-     *
-     * const CONTENT_TYPE_RSS = 'rss';
-     * const CONTENT_TYPE_JSON = 'json';
-     * const CONTENT_TYPE_404 = '404';
-     * const CONTENT_TYPE_HTML = 'html';
-     *
-     * @param string $type
-     * @return void
-     */
+    public function getSmartyInstance():Smarty
+    {
+        return $this->smarty;
+    }
+
     public function setRenderType(string $type)
     {
         $this->render_type = $type;
     }
 
-    /**
-     * Отдает элемент из массива $_REQUEST
-     *
-     * @param $key
-     * @param string $default
-     * @return mixed|string
-     */
     public function request($key, string $default = '')
     {
         return array_key_exists($key, $this->REQUEST) ? $this->REQUEST[$key] : $default;
     }
 
-    /**
-     * Сохраняет в репозитории класса данные, которые потом нужно сделать assign в смарти
-     *
-     * @param string $key
-     * @param $value
-     * @return void
-     */
-    public function assign(string $key, $value)
+    public function assign($key, $value = null)
     {
-        $this->template_vars[ $key ] = $value;
+        if (is_array($key)) {
+            foreach ($key as $k => $v) {
+                $this->assign($k, $v);
+            }
+        } else {
+            $this->template_vars[ $key ] = $value;
+        }
     }
 
-    /**
-     *
-     *
-     * @param string $url
-     */
-    public function setRedirect(string $url = '/')
+    public function setRedirect(string $uri = '/', int $code = 200)
     {
-        $this->force_redirect = $url;
+        $this->force_redirect = $uri;
+        $this->force_redirect_code = $code;
+
+        $this->redirect = [
+            'uri'   =>  $uri,
+            'code'  =>  $code
+        ];
     }
 
-    /**
-     * Устанавливает файл шаблона
-     *
-     * @param string $filename
-     * @return void
-     */
+    public function isRedirect():bool
+    {
+        return !empty($this->redirect);
+    }
+
+    public function makeRedirect(string $uri = null, int $code = null, bool $replace_headers = true)
+    {
+        $_uri = is_null($uri) ? (array_key_exists('uri', $this->redirect) ? $this->redirect['uri'] : null) : $uri;
+        $_code = is_null($code) ? (array_key_exists('code', $this->redirect) ? $this->redirect['code'] : null) : $code;
+
+        if (empty($_uri)) {
+            return false;
+        }
+
+        if (empty($_code)) {
+            $_code = 200;
+        }
+
+        if ((strpos( $_uri, "http://" ) !== false || strpos( $_uri, "https://" ) !== false)) {
+            header("Location: {$_uri}", $replace_headers, $_code);
+            exit(0);
+        }
+
+        $scheme = (TemplateHelper::is_ssl() ? "https://" : "http://");
+        $scheme = str_replace('://', '', $scheme);
+
+        header("Location: {$scheme}://{$_SERVER['HTTP_HOST']}{$_uri}", $replace_headers, $_code);
+        exit(0);
+    }
+
     public function setTemplate(string $filename)
     {
         $this->template_file = $filename;
     }
 
-    /**
-     * ?
-     *
-     * @param $key
-     * @param $value
-     * @return void
-     */
-    public function setRSS($key, $value)
-    {
-        $this->rss[ $key ] = $value;
-    }
-
-
-    /**
-     * Заменяет кавычки-лапки на html-entities
-     *
-     * @param $string
-     * @return array|string|string[]
-     */
-    public static function escapeQuotes($string)
-    {
-        return str_replace(['«', '»'], ['&laquo;', '&raquo;'], $string);
-    }
-
-    /**
-     * ?
-     * Сортирует и реверсирует порядок Titles
-     *
-     * @param $titles
-     * @return array
-     */
-    public static function reverseTitles($titles): array
-    {
-        $t = $titles;
-        ksort($t);
-        return array_reverse($t);
-    }
-
-    /**
-     * Посылает header, соответствующий типу контента
-     * Send header of given content type
-     *
-     * @param string $type
-     * @return void
-     */
     public function sendHeader(string $type = '')
     {
-        $content_type = empty($type) ? self::CONTENT_TYPES['_'] : (
-        array_key_exists($type, self::CONTENT_TYPES) ? self::CONTENT_TYPES[$type] : self::CONTENT_TYPES['_']
-        );
+        $content_type
+            = empty($type)
+            ? self::CONTENT_TYPES['_']
+            : ( array_key_exists($type, self::CONTENT_TYPES)
+                ? self::CONTENT_TYPES[$type]
+                : self::CONTENT_TYPES['_']
+            );
         header( $content_type );
     }
 
+    public function clean($clear_cache = true): bool
+    {
+        $this->smarty->clearAllAssign();
+
+        $this->template_vars = [];
+
+        if (!$clear_cache) {
+            return true;
+        }
+
+        foreach ($this->smarty->getTemplateVars() as $k => $v) {
+            $this->smarty->clearCache($k);
+        }
+
+        return true;
+    }
+
+    public function assignJSON(array $json)
+    {
+        foreach ($json as $key => $value) {
+            $this->assign($key, $value);
+        }
+    }
+
     /**
+     * @todo ?
+     *
+     * @param $varName
+     * @return mixed
+     */
+    public function getTemplateVars($varName = null)
+    {
+        return $this->smarty->getTemplateVars($varName);
+    }
+
+    /**
+     * Выполняет рендер и возвращает результат (строку)
+     *
      * @throws SmartyException
      * @throws JsonException
      */
-    public function render($clean = false)
+    public function render($send_header = false, $clean = false):string
     {
         if ($this->render_type === self::CONTENT_TYPE_JSON) {
             return json_encode($this->template_vars, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR);
@@ -226,48 +226,11 @@ class Template
             $this->clean();
         }
 
-        // А когда ставится header по MIMETYPE ?
+        if ($send_header) {
+            $this->sendHeader($this->render_type);
+        }
 
         return $rendered;
-    }
-
-    public function clean()
-    {
-        $this->smarty->clear_all_assign(); // polymorph call
-    }
-
-    /**
-     * helper
-     *
-     * @param $json
-     * @return void
-     */
-    public function assignJSON($json)
-    {
-        foreach ($json as $key => $value) {
-            $this->assign($key, $value);
-        }
-    }
-    /**
-     * Проверяет заданную переменную на допустимость (на основе массива допустимых значений)
-     * и если находит - возвращает её. В противном случае возвращает $default_value (по умолчанию NULL).
-     *
-     * @param $data
-     * @param $allowed_values_array
-     * @param $default_value
-     * @return null|mixed
-     */
-
-    private static function getAllowedValue( $data, $allowed_values_array, $default_value = NULL)
-    {
-        if (empty($data)) {
-            return $default_value;
-        } else {
-            $key = array_search($data, $allowed_values_array);
-            return ($key !== FALSE )
-                ? $allowed_values_array[ $key ]
-                : $default_value;
-        }
     }
 
 
