@@ -2,9 +2,6 @@
 
 namespace AJUR;
 
-use Smarty;
-use SmartyException;
-
 class TemplateHelper
 {
     public const HTTP_CODES = array(
@@ -61,40 +58,7 @@ class TemplateHelper
     }
 
     /**
-     * ?
-     * Сортирует и реверсирует порядок Titles
-     *
-     * @param $titles
-     * @return array
-     */
-    public static function reverseTitles($titles): array
-    {
-        $t = $titles;
-        ksort($t);
-        return array_reverse($t);
-    }
-
-    /**
-     * Регистрирует функцию _env в смарти
-     * Для использования:
-     * `var PARAM = {_env key='PARAM' default=250}`
-     *
-     * @throws SmartyException
-     */
-    public static function registerEnvFunction(Smarty $smarty)
-    {
-        $smarty->registerPlugin("function", "_env", static function($params, $smarty) {
-            $default = (empty($params['default'])) ? '' : $params['default'];
-            if (empty($params['key'])) {
-                return $default;
-            }
-            $k = getenv($params['key']);
-
-            return ($k === false) ? $default : $k;
-        }, false);
-    }
-
-    /**
+     * Подключено по HTTP или HTTPS?
      *
      * @return bool
      */
@@ -133,4 +97,5 @@ class TemplateHelper
                 : $default_value;
         }
     }
+
 }

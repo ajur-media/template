@@ -147,8 +147,9 @@ interface TemplateInterface
      * @param string $separator
      * @param bool $sort
      * @param bool $reverse_order
+     * @param bool $clean_extra_spaces
      * @return string
      */
-    public function makeTitle(string $separator = " ", bool $sort = true, bool $reverse_order = false);
+    public function makeTitle(string $separator = " ", bool $sort = true, bool $reverse_order = false, bool $clean_extra_spaces = true): string;
 
 }
