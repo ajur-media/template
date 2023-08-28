@@ -47,6 +47,8 @@ class Template implements TemplateInterface
 
     ];
 
+    public string   $raw_content = '';
+
     /**
      * @var LoggerInterface|NullLogger
      */
@@ -191,27 +193,33 @@ class Template implements TemplateInterface
         }
     }
 
-    /**
-     * @todo ?
-     *
-     * @param $varName
-     * @return mixed
-     */
+    public function assignRAW(string $html)
+    {
+        $this->raw_content = $html;
+        $this->setRenderType(TemplateInterface::CONTENT_TYPE_RAW);
+    }
+
     public function getTemplateVars($varName = null)
+    {
+        return
+            $varName
+            ? ( array_key_exists($varName, $this->template_vars) ? $this->template_vars[$varName] : '')
+            : $this->template_vars;
+    }
+
+    public function getAssignedVars($varName = null)
     {
         return $this->smarty->getTemplateVars($varName);
     }
 
-    /**
-     * Выполняет рендер и возвращает результат (строку)
-     *
-     * @throws SmartyException
-     * @throws JsonException
-     */
     public function render($send_header = false, $clean = false):string
     {
         if ($this->render_type === self::CONTENT_TYPE_JSON) {
             return json_encode($this->template_vars, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR);
+        }
+
+        if ($this->render_type === self::CONTENT_TYPE_RAW) {
+            return $this->raw_content;
         }
 
         foreach ($this->template_vars as $key => $value) {

@@ -2,8 +2,10 @@
 
 namespace AJUR;
 
+use JsonException;
 use Psr\Log\LoggerInterface;
 use Smarty;
+use SmartyException;
 
 interface TemplateInterface
 {
@@ -12,6 +14,7 @@ interface TemplateInterface
     const CONTENT_TYPE_404  = '404';
     const CONTENT_TYPE_HTML = 'html';
     const CONTENT_TYPE_JS   = 'js'; // 'application/javascript'
+    const CONTENT_TYPE_RAW  = 'raw';
 
     /**
      * Available content types
@@ -21,6 +24,7 @@ interface TemplateInterface
         self::CONTENT_TYPE_JSON     =>  'Content-Type: application/json; charset=utf-8',
         self::CONTENT_TYPE_404      =>  "HTTP/1.0 404 Not Found",
         self::CONTENT_TYPE_HTML     =>  "Content-Type: text/html; charset=utf-8",
+        self::CONTENT_TYPE_RAW      =>  "Content-Type: text/html; charset=utf-8",
         self::CONTENT_TYPE_JS       =>  "Content-Type: text/javascript;charset=utf-8",
         '_'                         =>  "Content-Type: text/html; charset=utf-8",
     ];
@@ -74,6 +78,22 @@ interface TemplateInterface
     public function assign($key, $value = null);
 
     /**
+     * Отправляет в шаблон сырые данные
+     *
+     * @param string $html
+     * @return void
+     */
+    public function assignRAW(string $html);
+
+    /**
+     * helper
+     *
+     * @param array $json
+     * @return void
+     */
+    public function assignJSON(array $json);
+
+    /**
      * Устанавливает параметры редиректа
      *
      * @param string $uri
@@ -117,14 +137,6 @@ interface TemplateInterface
     public function sendHeader(string $type = '');
 
     /**
-     * helper
-     *
-     * @param array $json
-     * @return void
-     */
-    public function assignJSON(array $json);
-
-    /**
      * Очищает все установленные и переданные в шаблон переменные
      * как из репозитория шаблона, так и из Smarty
      *
@@ -152,4 +164,31 @@ interface TemplateInterface
      */
     public function makeTitle(string $separator = " ", bool $sort = true, bool $reverse_order = false, bool $clean_extra_spaces = true): string;
 
+    /**
+     * Возвращает данные, проброшенные в шаблон
+     *
+     * @param $varName
+     * @return array|mixed|string
+     */
+    public function getTemplateVars($varName = null);
+
+    /**
+     * Возвращает данные, проброшенные в Smarty
+     *
+     * @param $varName
+     * @return mixed
+     */
+    public function getAssignedVars($varName = null);
+
+    /**
+     * Выполняет рендер и возвращает результат (строку)
+     *
+     * - CONTENT_TYPE_JSON - возвращает jsonized массив template_vars
+     * - CONTENT_TYPE_RAW - возвращает "сырой" контент из raw_content
+     * - для остальных типов выполняет рендер
+     *
+     * @throws SmartyException
+     * @throws JsonException
+     */
+    public function render($send_header = false, $clean = false):string;
 }
