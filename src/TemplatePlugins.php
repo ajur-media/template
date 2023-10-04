@@ -13,15 +13,17 @@ class TemplatePlugins
 
     /**
      * Регистрирует метод класса TemplatePlugins как плагин.
-     * Тип плагина определяется ОБЯЗАТЕЛЬНЫМ параметром `@smarty_plugin_type` в аннотации, допустимые значения: function|block|compiler|modifier.
-     * Кэширование плагина определяется параметром `@smarty_plugin_cacheable` в аннотации, допустимые значения: true|false (default false)
+     *
+     * В аннотации метода используются следующие параметры:
+     *
+     * - `@smarty_plugin_type` - обязательно, тип плагина: function|block|compiler|modifier
+     * - `@smarty_plugin_name` - опционально, имя, под которым регистрируем метод. По умолчанию совпадает с именем функции.
+     * - `@smarty_plugin_cacheable` - опционально, тип кэширования, true|false (default false)
      *
      * NB: Дополнение: сейчас можно регистрировать только статический метод из класса TemplatePlugins
      *
      * TODO: Хорошо бы дополнить этот механизм возможность регистрировать плагином произвольную функцию произвольного класса:
      * \AJUR\TemplatePlugins::register($SMARTY, [ "size_format", "MyClass::convert", "_func" => "MyClass::func" ]);
-     *
-     * TODO: добавить обработку параметра `@smarty_plugin_name` - имя, под которым регистрируем метод. По умолчанию совпадает с именем функции.
      *
      * Как мы можем передавать функцию:
      * 1) строка - ищется сначала в TemplatePlugins::method, потом method в глобальной области видимости среди функций
@@ -39,23 +41,9 @@ class TemplatePlugins
             }
 
             if (is_callable([self::class, $entity])) {
-                // $smarty->registerPlugin()
-                /*
-                 * И вот тут вылезает проблема.
-                 *
-                 * Дело в том, что есть 4 типа плагина: function, modifier, block и еще что-то.
-                 *
-                 * По вызываемой функции совершенно непонятно, к какому типу плагина она относится.
-                 *
-                 * Что можно с этим сделать?
-                 *
-                 * Я вижу только одно решение: ПАРСИТЬ АННОТАЦИИ
+                /**
+                 * Для определения параметров подключаемого плагина мы парсим аннотации:
                  * https://www.php.net/manual/en/reflectionclass.getdoccomment.php
-                 *
-                 * и искать там, к примеру, запись @smarty_plugin_type <string>
-                 *
-                 * Важно: нужно opcache.save_comments = 1
-                 *
                  */
                 $comment_string = (new ReflectionClass(self::class))->getMethod($entity)->getDocComment();
 
@@ -80,37 +68,56 @@ class TemplatePlugins
                 $modifier_cacheable = !(($modifier_cacheable === 'false'));
 
                 // теперь регистрируем хэндлер:
+                //
+                // Как мы можем передавать функцию?
+                // строка - ищется сначала в TemplatePlugins::method, потом method в глобальной области видимости среди функций
+                // массив [class, method]
+                // хорошо бы расширенный строковый формат "Class::method" -> [Class, method]
                 $smarty->registerPlugin($modifier_type, $entity, [self::class, $entity], $modifier_cacheable);
 
                 self::$already_registred[] = $entity;
             }
         }
-
     }
 
     /**
+     * Форматирует вывод размера файла
+     *
      * @smarty_plugin_type modifier
      * @smarty_plugin_cacheable false
+     * @usage `{$size|size_format:[ decimals => 3, decimal_separator => '.', thousands_separator => ' ', units =>  ]}`
+     * Параметры передаются как массив:
+     * - decimals - число знаков после запятой (3)
+     * - decimal_separator - разделитель целой/дробной части (',')
+     * - thousands_separator - разделитель тысяч (' ')
+     * - units - юниты, ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
      *
-     * @usage {$value|size_format}
+     *
      *
      * @param int $size
-     * @param int $decimals
-     * @param string $decimal_separator
-     * @param string $thousands_separator
+     * @param array $params [int $decimals = 3, string $decimal_separator = '.', string $thousands_separator = ',']
      * @return string
      */
-    public static function size_format(int $size, int $decimals = 0, string $decimal_separator = '.', string $thousands_separator = ','):string
+    public static function size_format(int $size, array $params):string
     {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        $decimals               = $params['decimals'] ?? 3;
+        $decimal_separator      = $params['decimal_separator'] ?? '.';
+        $thousands_separator    = $params['thousands_separator'] ?? ',';
+        $units                  = $params['units'] ?? ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        if (empty($units)) {
+            $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        }
+
         $index = min(floor((strlen(strval($size)) - 1) / 3), count($units) - 1);
         $number = number_format($size / pow(1000, $index), $decimals, $decimal_separator, $thousands_separator);
         return sprintf('%s %s', $number, $units[$index]);
     }
 
     /**
-     * @smarty_plugin_type modifier
+     * Dump and die
      *
+     * @smarty_plugin_type modifier
+     * @smarty_plugin_cacheable false
      * @usage `{$value|dd}`
      *
      * @return void
@@ -129,18 +136,63 @@ class TemplatePlugins
     }
 
     /**
+     * Вставляет в шаблон значение переменной из окружения (getenv)
+     *
      * @smarty_plugin_type function
      * @smarty_plugin_name _env
+     * @smarty_plugin_cacheable false
      *
-     * @usage `var VALUE = {_env key='ENV_VAR' default=250};`
+     * @usage `{_env key='ENV_VAR' default=250}`
      *
-     * @param $key
-     * @param $value
-     * @return array|false|mixed|string|null
+     * @param $params
+     * @return void
      */
-    public static function _env($key, $value = null)
+    public static function _env($params):string
     {
-        return array_key_exists($key, getenv()) ? getenv($key) : $value;
+        $default = (empty($params['default'])) ? '' : $params['default'];
+        if (empty($params['key'])) {
+            return $default;
+        }
+
+        $k = getenv($params['key']);
+        return ($k === false) ? $default : (string)$k;
     }
+
+    /**
+     * Форма числительного, параметры передаются массивом-списком.
+     * Превращает число в строку, соответствующую его форме числительного.
+     * Важно: не добавляет суффикс к числу, а заменяет число на строку!
+     *
+     * Дефолтного значения параметры не имеют, поэтому если соотв. форма будет пропущена,
+     * то будет пустая строка.
+     *
+     * @smarty_plugin_type modifier
+     * @smarty_plugin_cacheable false
+     *
+     * @usage `{$value} {$value|pluralForm:["Найдена","Найдено","Найдены"]}`
+     *
+     * @param $number
+     * @param $forms
+     * @return string
+     */
+    public static function pluralForm($number, $forms):string
+    {
+        $forms += ['', '', ''];
+
+        return
+            ($number % 10 == 1 && $number % 100 != 11)
+                ? $forms[0]
+                : (
+            ($number % 10 >= 2 && $number % 10 <= 4 && ($number % 100 < 10 || $number % 100 >= 20))
+                ? $forms[1]
+                : $forms[2]
+            );
+    }
+
+
+
+
+
+
 
 }

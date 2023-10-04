@@ -55,6 +55,56 @@ echo $global->render();
 
 ```
 
+### Плагины шаблонизатора
+
+Для корректной работы плагина нужен параметр `opcache.save_comments = 1` в php.ini 
+
+Передача параметров в (регистрируемые) плагины:
+
+#### modifier
+
+Есть два способа и зависят они от способа регистрации функции:
+
+А) через перечисление аргументов (причем опущенные аргументы принимают значение по умолчанию)
+
+```php
+{$size|size_format:decimals:separator:separator}
+```
+
+Тогда функция должна быть определена так:
+```php
+public static function size_format(int $size, int $decimals = 0, string $decimal_separator = '.', string $thousands_separator = ','):string;
+```
+
+Б) через массив аргументов
+```php
+{$size|size_format:[3,',','-']}
+```
+Тогда функция должна быть определена иначе:
+```php
+public static function sf(int $size, array $params):string 
+{
+    $decimals = $params['decimals'] ?? 3;
+    $decimal_separator = $params['decimal_separator'] ?? '.';
+    $thousands_separator = $params['thousands_separator'] ?? ',';
+    // ...
+}
+```
+
+#### function
+
+Используется так:
+```php
+{sum a=11 b=14}
+```
+
+Метод должен быть определен ТОЛЬКО так:
+```php
+function sum($params)
+{
+    return ($params['a'] ?? 0) + ($params['b'] ?? 0);
+}
+```
 
 
 
