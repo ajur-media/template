@@ -12,3 +12,12 @@
 - 3) хорошо бы расширенный строковый формат "Class::method" -> [Class, method]
 
 - добавить обработку параметра `@smarty_plugin_name` - имя, под которым регистрируем метод. По умолчанию совпадает с именем функции.
+
+Добавить flash-messages, см как сделано в `slim/flash`
+
+`->setFlashMessage($code, $message)`
+
+`->getFlashMessages():array`
+
+`->assingFlashMessages($value = 'flash_messages')`
+

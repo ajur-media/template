@@ -34,9 +34,6 @@ class Template implements TemplateInterface
 
     private array   $template_vars = [];
 
-    public string   $force_redirect = '';
-    public int      $force_redirect_code = 200;
-
     private string  $template_file = '';
 
     private array   $JSON = [];
@@ -46,6 +43,9 @@ class Template implements TemplateInterface
     public array    $redirect = [
 
     ];
+
+    public string   $force_redirect = '';
+    public int      $force_redirect_code = 200;
 
     public string   $raw_content = '';
 
@@ -120,6 +120,8 @@ class Template implements TemplateInterface
             'uri'   =>  $uri,
             'code'  =>  $code
         ];
+
+        $this->setRenderType( self::CONTENT_TYPE_REDIRECT );
     }
 
     public function isRedirect():bool
@@ -212,8 +214,12 @@ class Template implements TemplateInterface
         return $this->smarty->getTemplateVars($varName);
     }
 
-    public function render($send_header = false, $clean = false):string
+    public function render($send_header = false, $clean = false)
     {
+        if ($this->render_type === self::CONTENT_TYPE_REDIRECT) {
+            return null;
+        }
+
         if ($this->render_type === self::CONTENT_TYPE_JSON) {
             return json_encode($this->template_vars, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR);
         }

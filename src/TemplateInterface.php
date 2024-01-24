@@ -16,6 +16,8 @@ interface TemplateInterface
     const CONTENT_TYPE_JS   = 'js'; // 'application/javascript'
     const CONTENT_TYPE_RAW  = 'raw';
 
+    const CONTENT_TYPE_REDIRECT = 'redirect';
+
     /**
      * Available content types
      */
@@ -189,6 +191,7 @@ interface TemplateInterface
      *
      * @throws SmartyException
      * @throws JsonException
+     * @return string|null
      */
-    public function render($send_header = false, $clean = false):string;
+    public function render($send_header = false, $clean = false);
 }

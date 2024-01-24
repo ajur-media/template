@@ -177,7 +177,7 @@ class TemplatePlugins
      */
     public static function pluralForm($number, $forms):string
     {
-        $forms += ['', '', ''];
+        $forms += ['', '', '']; // https://stackoverflow.com/a/17521426
 
         return
             ($number % 10 == 1 && $number % 100 != 11)

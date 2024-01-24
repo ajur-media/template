@@ -1,5 +1,9 @@
 # AJUR Templater
 
+https://github.com/ajur-media/template
+https://packagist.org/packages/ajur-media/template
+
+
 ### How to use?
 
 ```php
