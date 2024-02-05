@@ -1,6 +1,6 @@
 <?php
 
-namespace AJUR;
+namespace AJUR\Template;
 
 use ReflectionClass;
 use ReflectionException;
@@ -33,7 +33,7 @@ class TemplatePlugins
      * @throws ReflectionException
      * @throws SmartyException
      */
-    public static function register(Smarty $smarty, $plugins = [])
+    public static function register(Smarty $smarty, $plugins = []): void
     {
         foreach ($plugins as $entity) {
             if (in_array($entity, self::$already_registred)) {
@@ -122,7 +122,7 @@ class TemplatePlugins
      *
      * @return void
      */
-    public static function dd()
+    public static function dd(): void
     {
         if (php_sapi_name() !== "cli") echo '<pre>';
         if (func_num_args()) {
@@ -189,10 +189,6 @@ class TemplatePlugins
             );
     }
 
-
-
-
-
-
-
 }
+
+# -eof-

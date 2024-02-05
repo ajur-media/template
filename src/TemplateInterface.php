@@ -1,6 +1,6 @@
 <?php
 
-namespace AJUR;
+namespace AJUR\Template;
 
 use JsonException;
 use Psr\Log\LoggerInterface;
@@ -63,6 +63,7 @@ interface TemplateInterface
 
     /**
      * Отдает элемент из массива $_REQUEST
+     * (если он передан при инициализации)
      *
      * @param $key
      * @param string $default
@@ -195,3 +196,5 @@ interface TemplateInterface
      */
     public function render($send_header = false, $clean = false);
 }
+
+# -eof-

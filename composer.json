@@ -11,7 +11,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "AJUR\\": "src/"
+            "AJUR\\Template\\": "src/"
         }
     },
     "authors": [
@@ -19,5 +19,8 @@
             "name": "Karel Wintersky",
             "email": "karel.wintersky@gmail.com"
         }
-    ]
+    ],
+    "require-dev": {
+        "rector/rector": "^0.19.8"
+    }
 }

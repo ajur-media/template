@@ -1,12 +1,10 @@
 <?php
 
-namespace AJUR;
+namespace AJUR\Template;
 
-use JsonException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Smarty;
-use SmartyException;
 
 class Template implements TemplateInterface
 {
@@ -35,8 +33,6 @@ class Template implements TemplateInterface
     private array   $template_vars = [];
 
     private string  $template_file = '';
-
-    private array   $JSON = [];
 
     public \stdClass $options;
 
@@ -90,7 +86,7 @@ class Template implements TemplateInterface
         return $this->smarty;
     }
 
-    public function setRenderType(string $type)
+    public function setRenderType(string $type): void
     {
         $this->render_type = $type;
     }
@@ -100,7 +96,7 @@ class Template implements TemplateInterface
         return array_key_exists($key, $this->REQUEST) ? $this->REQUEST[$key] : $default;
     }
 
-    public function assign($key, $value = null)
+    public function assign($key, $value = null): void
     {
         if (is_array($key)) {
             foreach ($key as $k => $v) {
@@ -111,7 +107,7 @@ class Template implements TemplateInterface
         }
     }
 
-    public function setRedirect(string $uri = '/', int $code = 200)
+    public function setRedirect(string $uri = '/', int $code = 200): void
     {
         $this->force_redirect = $uri;
         $this->force_redirect_code = $code;
@@ -147,19 +143,19 @@ class Template implements TemplateInterface
             exit(0);
         }
 
-        $scheme = (TemplateHelper::is_ssl() ? "https://" : "http://");
+        $scheme = TemplateHelper::is_ssl() ? "https://" : "http://";
         $scheme = str_replace('://', '', $scheme);
 
         header("Location: {$scheme}://{$_SERVER['HTTP_HOST']}{$_uri}", $replace_headers, $_code);
         exit(0);
     }
 
-    public function setTemplate($filename = null)
+    public function setTemplate($filename = null): void
     {
         $this->template_file = empty($filename) ? '' : $filename;
     }
 
-    public function sendHeader(string $type = '')
+    public function sendHeader(string $type = ''): void
     {
         $content_type
             = empty($type)
@@ -188,14 +184,14 @@ class Template implements TemplateInterface
         return true;
     }
 
-    public function assignJSON(array $json)
+    public function assignJSON(array $json): void
     {
         foreach ($json as $key => $value) {
             $this->assign($key, $value);
         }
     }
 
-    public function assignRAW(string $html)
+    public function assignRAW(string $html): void
     {
         $this->raw_content = $html;
         $this->setRenderType(TemplateInterface::CONTENT_TYPE_RAW);
@@ -250,11 +246,10 @@ class Template implements TemplateInterface
     }
 
 
-    public function addTitle(string $title_part)
+    public function addTitle(string $title_part): void
     {
         $this->titles[] = $title_part;
     }
-
 
     public function makeTitle(string $separator = " ", bool $sort = true, bool $reverse_order = false, bool $clean_extra_spaces = true):string
     {
@@ -276,6 +271,6 @@ class Template implements TemplateInterface
 
         return $t;
     }
-
-
 }
+
+# -eof-

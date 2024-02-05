@@ -1,6 +1,6 @@
 <?php
 
-namespace AJUR;
+namespace AJUR\Template;
 
 class TemplateHelper
 {
@@ -97,5 +97,6 @@ class TemplateHelper
                 : $default_value;
         }
     }
-
 }
+
+# -eof-
