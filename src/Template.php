@@ -2,12 +2,39 @@
 
 namespace AJUR\Template;
 
+use Arris\Entity\Result;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Smarty;
 
 class Template implements TemplateInterface
 {
+    const JSON_ENCODE_FLAGS = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR;
+
+    const CONTENT_TYPE_RSS  = 'rss';
+    const CONTENT_TYPE_JSON = 'json';
+    const CONTENT_TYPE_404  = '404';
+    const CONTENT_TYPE_HTML = 'html';
+    const CONTENT_TYPE_JS   = 'js'; // 'application/javascript'
+    const CONTENT_TYPE_RAW  = 'raw';
+    const CONTENT_TYPE_RESULT = 'result';
+
+    const CONTENT_TYPE_REDIRECT = 'redirect';
+
+    /**
+     * Available content headers
+     */
+    const CONTENT_TYPES = [
+        self::CONTENT_TYPE_RSS      =>  'Content-type: application/xml',
+        self::CONTENT_TYPE_JSON     =>  'Content-Type: application/json; charset=utf-8',
+        self::CONTENT_TYPE_RESULT   =>  'Content-Type: application/json; charset=utf-8',
+        self::CONTENT_TYPE_404      =>  "HTTP/1.0 404 Not Found",
+        self::CONTENT_TYPE_HTML     =>  "Content-Type: text/html; charset=utf-8",
+        self::CONTENT_TYPE_RAW      =>  "Content-Type: text/html; charset=utf-8",
+        self::CONTENT_TYPE_JS       =>  "Content-Type: text/javascript;charset=utf-8",
+        '_'                         =>  "Content-Type: text/html; charset=utf-8",
+    ];
+
     /**
      * @var Smarty
      */
@@ -36,10 +63,13 @@ class Template implements TemplateInterface
 
     public \stdClass $options;
 
+    public array $json;
+
+    public Result $result;
+
     public array    $redirect = [
 
     ];
-
     public string   $force_redirect = '';
     public int      $force_redirect_code = 200;
 
@@ -167,6 +197,9 @@ class Template implements TemplateInterface
         header( $content_type );
     }
 
+    /**
+     * @inheritDoc
+     */
     public function clean($clear_cache = true): bool
     {
         $this->smarty->clearAllAssign();
@@ -184,17 +217,23 @@ class Template implements TemplateInterface
         return true;
     }
 
+    public function assignResult(Result $result):void
+    {
+        $this->result = $result;
+        $this->render_type = self::CONTENT_TYPE_RESULT;
+    }
+
     public function assignJSON(array $json): void
     {
         foreach ($json as $key => $value) {
-            $this->assign($key, $value);
+            $this->json[ $key ] = $value;
         }
     }
 
     public function assignRAW(string $html): void
     {
         $this->raw_content = $html;
-        $this->setRenderType(TemplateInterface::CONTENT_TYPE_RAW);
+        $this->setRenderType(Template::CONTENT_TYPE_RAW);
     }
 
     public function getTemplateVars($varName = null)
@@ -217,7 +256,11 @@ class Template implements TemplateInterface
         }
 
         if ($this->render_type === self::CONTENT_TYPE_JSON) {
-            return json_encode($this->template_vars, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR);
+            return json_encode($this->template_vars, self::JSON_ENCODE_FLAGS);
+        }
+
+        if ($this->render_type === self::CONTENT_TYPE_RESULT) {
+            return json_encode($this->result, self::JSON_ENCODE_FLAGS);
         }
 
         if ($this->render_type === self::CONTENT_TYPE_RAW) {

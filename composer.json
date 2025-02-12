@@ -6,7 +6,8 @@
         "php": "^7.4 || 8.*",
         "ext-json": "*",
         "psr/log": "^1.1",
-        "smarty/smarty": "^4.3"
+        "smarty/smarty": "^4.3",
+        "karelwintersky/arris.entity": "^0.9.8"
     },
     "license": "MIT",
     "autoload": {

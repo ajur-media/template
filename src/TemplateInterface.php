@@ -2,6 +2,7 @@
 
 namespace AJUR\Template;
 
+use Arris\Entity\Result;
 use JsonException;
 use Psr\Log\LoggerInterface;
 use Smarty;
@@ -9,28 +10,6 @@ use SmartyException;
 
 interface TemplateInterface
 {
-    const CONTENT_TYPE_RSS  = 'rss';
-    const CONTENT_TYPE_JSON = 'json';
-    const CONTENT_TYPE_404  = '404';
-    const CONTENT_TYPE_HTML = 'html';
-    const CONTENT_TYPE_JS   = 'js'; // 'application/javascript'
-    const CONTENT_TYPE_RAW  = 'raw';
-
-    const CONTENT_TYPE_REDIRECT = 'redirect';
-
-    /**
-     * Available content types
-     */
-    const CONTENT_TYPES = [
-        self::CONTENT_TYPE_RSS      =>  'Content-type: application/xml',
-        self::CONTENT_TYPE_JSON     =>  'Content-Type: application/json; charset=utf-8',
-        self::CONTENT_TYPE_404      =>  "HTTP/1.0 404 Not Found",
-        self::CONTENT_TYPE_HTML     =>  "Content-Type: text/html; charset=utf-8",
-        self::CONTENT_TYPE_RAW      =>  "Content-Type: text/html; charset=utf-8",
-        self::CONTENT_TYPE_JS       =>  "Content-Type: text/javascript;charset=utf-8",
-        '_'                         =>  "Content-Type: text/html; charset=utf-8",
-    ];
-
     /**
      * call: smarty, $_REQUEST, $options, $logger
      *
@@ -87,6 +66,14 @@ interface TemplateInterface
      * @return void
      */
     public function assignRAW(string $html);
+
+    /**
+     * Сохраняет для шаблонизатора Result
+     *
+     * @param Result $result
+     * @return void
+     */
+    public function assignResult(Result $result):void;
 
     /**
      * helper
